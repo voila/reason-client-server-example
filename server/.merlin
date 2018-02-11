@@ -1,0 +1,9 @@
+B _build
+PKG cohttp
+PKG conduit
+PKG cohttp-lwt
+PKG ezjsonm
+PKG lwt
+PKG uri
+PKG re.str
+S .
