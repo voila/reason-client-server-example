@@ -1,1 +1,1 @@
-ReactDOMRe.renderToElementWithId(<Temp />, "index");
+ReactDOMRe.renderToElementWithId(<Weather />, "index");

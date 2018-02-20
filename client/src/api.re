@@ -1,4 +1,4 @@
-type datapoint = {
+type point = {
   time: float,
   icon: string,
   summary: string,
@@ -8,9 +8,9 @@ type datapoint = {
   wind: float
 };
 
-type datapoints = list(datapoint);
+type points = list(point);
 
-let decodeDataPoint: Json.Decode.decoder(datapoint) =
+let decodeDataPoint: Json.Decode.decoder(point) =
   json =>
     Json.Decode.{
       time: field("time", Json.Decode.float, json),
@@ -22,11 +22,11 @@ let decodeDataPoint: Json.Decode.decoder(datapoint) =
       wind: field("windSpeed", Json.Decode.float, json)
     };
 
-let parseJson = (json: Js.Json.t) : datapoints =>
+let parseJson = (json: Js.Json.t) : points =>
   json |> Json.Decode.list(decodeDataPoint);
 
 /* temp: Json.Decode.field("temp", Json.Decode.float, json) */
-let fetchTemperature = (lat: string, lon: string) : Js_promise.t(datapoints) => {
+let fetchTemperature = (lat: string, lon: string) : Js_promise.t(points) => {
   let apiUrl = {j|/weather/$lat/$lon?|j};
   Js.Promise.(
     Bs_fetch.fetch(apiUrl)

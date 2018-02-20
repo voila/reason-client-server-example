@@ -1,9 +1,3 @@
-/*
- $ make build
- $ make start
- $ curl http://0.0.0.0:8000/weather/42.3601/-71.0589
- {"temp":8.305555555555557}
- */
 open Lwt;
 
 open Cohttp_lwt_unix;
@@ -13,7 +7,7 @@ open Ezjsonm;
 /* Helpers */
 let celsius_of_fahrenheit = t => (t -. 32.0) /. 1.8;
 
-let call_api = uri_str =>
+let callApi = uri_str =>
   Client.get(Uri.of_string(uri_str))
   >>= (((_, body)) => Cohttp_lwt_body.to_string(body));
 
@@ -50,7 +44,7 @@ let dataPoints = (json: string) : datapoints =>
 
 exception MissingApiKey;
 
-/* extract temperature from JSON returned by weather API */
+/* extract data from JSON returned by weather API */
 let darksky = (~lat: string, ~lon: string) : Lwt.t(datapoints) => {
   let key =
     try (Sys.getenv("DARKSKY_API_KEY")) {
@@ -64,7 +58,7 @@ let darksky = (~lat: string, ~lon: string) : Lwt.t(datapoints) => {
     ++ ","
     ++ lon
     ++ "?units=si";
-  call_api(uri) >|= dataPoints;
+  callApi(uri) >|= dataPoints;
 };
 
 let json_of_datapoint = ({time, icon, summary, precInt, precProb, temp, wind}) =>
@@ -82,10 +76,9 @@ let string_of_datapoints = (pts: datapoints) =>
   to_string(`A(List.map(json_of_datapoint, pts)));
 
 /* call API, return JSON object {"temp": <float> } */
-let temperature = (~lat: string, ~lon: string) : Lwt.t(string) =>
+let weather = (~lat: string, ~lon: string) : Lwt.t(string) =>
   darksky(~lat, ~lon) >|= string_of_datapoints;
 
-/* to_string(`O([("temp", `Float(temp))]))); */
 /* web  server */
 let make_server = (~port: int) : Lwt.t(unit) => {
   let callback = (conn_id, req, body) => {
@@ -97,21 +90,16 @@ let make_server = (~port: int) : Lwt.t(unit) => {
         | ["", "index.js", ...rest] =>
           Server.respond_file(~fname="index.js", ())
         | ["", "index", ...rest] =>
-          /* Access-Control-Allow-Origin: * */
           Server.respond_file(~fname="index.html", ())
         | ["", "weather", lat, lon, ...rest] =>
-          temperature(~lat, ~lon)
+          weather(~lat, ~lon)
           >>= (
-            temp => {
+            data => {
               let headers =
                 Cohttp.Header.(
                   init_with("content-type", "application/json; charset=utf-8")
                 );
-              Lwt_io.printf("%s\n", temp)
-              >>= (
-                () =>
-                  Server.respond_string(~headers, ~status=`OK, ~body=temp, ())
-              );
+              Server.respond_string(~headers, ~status=`OK, ~body=data, ());
             }
           )
         | _ =>
