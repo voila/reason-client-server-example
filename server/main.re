@@ -17,25 +17,75 @@ let call_api = uri_str =>
   Client.get(Uri.of_string(uri_str))
   >>= (((_, body)) => Cohttp_lwt_body.to_string(body));
 
-/* extract temperature from JSON returned by weather API */
-let darksky = (~lat: string, ~lon: string) : Lwt.t(float) => {
-  let temp_of_json = json =>
-    get_dict(from_string(json))
-    |> List.assoc("currently")
-    |> get_dict
-    |> List.assoc("temperature")
-    |> get_float
-    |> celsius_of_fahrenheit;
-  let key = Sys.getenv("DARKSKY_API_KEY");
-  let uri =
-    "https://api.darksky.net/forecast/" ++ key ++ "/" ++ lat ++ "," ++ lon;
-  call_api(uri) >|= temp_of_json;
+type datapoint = {
+  time: float,
+  icon: string,
+  summary: string,
+  precInt: float,
+  precProb: float,
+  temp: float,
+  wind: float
 };
+
+let dataPoint = (v: Ezjsonm.value) : datapoint => {
+  let d = v |> get_dict;
+  let time = d |> List.assoc("time") |> get_float;
+  let icon = d |> List.assoc("icon") |> get_string;
+  let summary = d |> List.assoc("summary") |> get_string;
+  let precInt = d |> List.assoc("precipIntensity") |> get_float;
+  let precProb = d |> List.assoc("precipProbability") |> get_float;
+  let temp = d |> List.assoc("temperature") |> get_float;
+  let wind = d |> List.assoc("windSpeed") |> get_float;
+  {time, icon, summary, precInt, precProb, temp, wind};
+};
+
+type datapoints = list(datapoint);
+
+let dataPoints = (json: string) : datapoints =>
+  get_dict(from_string(json))
+  |> List.assoc("hourly")
+  |> get_dict
+  |> List.assoc("data")
+  |> get_list(dataPoint);
+
+exception MissingApiKey;
+
+/* extract temperature from JSON returned by weather API */
+let darksky = (~lat: string, ~lon: string) : Lwt.t(datapoints) => {
+  let key =
+    try (Sys.getenv("DARKSKY_API_KEY")) {
+    | Not_found => raise(MissingApiKey)
+    };
+  let uri =
+    "https://api.darksky.net/forecast/"
+    ++ key
+    ++ "/"
+    ++ lat
+    ++ ","
+    ++ lon
+    ++ "?units=si";
+  call_api(uri) >|= dataPoints;
+};
+
+let json_of_datapoint = ({time, icon, summary, precInt, precProb, temp, wind}) =>
+  `O([
+    ("time", `Float(time)),
+    ("summary", `String(summary)),
+    ("icon", `String(icon)),
+    ("precipIntensity", `Float(precInt)),
+    ("precipProbability", `Float(precProb)),
+    ("temperature", `Float(temp)),
+    ("windSpeed", `Float(wind))
+  ]);
+
+let string_of_datapoints = (pts: datapoints) =>
+  to_string(`A(List.map(json_of_datapoint, pts)));
 
 /* call API, return JSON object {"temp": <float> } */
 let temperature = (~lat: string, ~lon: string) : Lwt.t(string) =>
-  darksky(~lat, ~lon) >|= (temp => to_string(`O([("temp", `Float(temp))])));
+  darksky(~lat, ~lon) >|= string_of_datapoints;
 
+/* to_string(`O([("temp", `Float(temp))]))); */
 /* web  server */
 let make_server = (~port: int) : Lwt.t(unit) => {
   let callback = (conn_id, req, body) => {
