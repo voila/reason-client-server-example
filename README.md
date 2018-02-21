@@ -25,7 +25,7 @@ A simple example of a client-server application using DarkSky API (https://darks
 
 ```
 $ opam switch 4.02.3+buckle-master
-$ opam install cohttp.0.22.0 ezjsonm re
+$ opam install lwt cohttp.0.22.0 ezjsonm re
 ```
 
 ### to build and start
