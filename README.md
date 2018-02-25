@@ -93,6 +93,7 @@ $ opam install lwt cohttp.0.22.0 ezjsonm re
 
     $ cd server
     $ make build
+    $ export DARKSKY_API_KEY=<your_api_key>
     $ make start
 
 open http://localhost:8000/index in a browser
