@@ -8,7 +8,8 @@ type state = {data: option(Api.points)};
 
 type action =
   | DataLoaded(Api.points)
-  | PosLoaded(Geo.position);
+  | PosLoaded(float, float)
+  | PosError(string);
 
 let component = ReasonReact.reducerComponent("Page");
 
@@ -17,8 +18,11 @@ let make = _children => {
   initialState: () => {data: None},
   reducer: (action, _state) =>
     switch action {
-    | DataLoaded(t) => ReasonReact.Update({data: Some(t)})
-    | PosLoaded((lat, lon)) =>
+    | DataLoaded(pts) => ReasonReact.Update({data: Some(pts)})
+    | PosError(msg) =>
+      alert("GeoLocation: " ++ msg);
+      ReasonReact.NoUpdate;
+    | PosLoaded(lat, lon) =>
       let lat = string_of_float(lat);
       let lon = string_of_float(lon);
       ReasonReact.SideEffects(
@@ -34,18 +38,10 @@ let make = _children => {
       );
     },
   didMount: self => {
-    Geo.getLocation();
-    let rec checkPos = () =>
-      Js.Global.setTimeout(
-        () =>
-          switch Geo.position^ {
-          | Geo.Location((lat, lon)) => self.send(PosLoaded((lat, lon)))
-          | Geo.LocWaiting => checkPos() |> ignore
-          | Geo.LocError(msg) => alert("GeoLocation: " ++ msg)
-          },
-        1000
-      );
-    let _ = checkPos();
+    Geo.getLocation(
+      ~sendPos=(lat, lon) => self.send(PosLoaded(lat, lon)),
+      ~sendErr=msg => self.send(PosError(msg))
+    );
     ReasonReact.NoUpdate;
   },
   render: ({state}) =>
