@@ -86,14 +86,26 @@ Finally, we convert our datapoint values to JSON with ```string_of_datapoints```
 ```
 $ export DARKSKY_API_KEY=YOUR_KEY_HERE
 $ opam switch 4.02.3+buckle-master
-$ opam install lwt cohttp.0.22.0 ezjsonm re
+$ opam update
+$ opam install reason merlin re tls lwt cohttp ezjsonm
 ```
 
-### to build and start
+### to build
 
     $ cd server
     $ make build
     $ export DARKSKY_API_KEY=<your_api_key>
     $ make start
+
+## Docker
+
+Alternatively, use the Dockerfile to build a container with the client and server code. First, edit Dockerfile and replace <YOUR_KEY_HERE> with your API key
+
+```
+$ docker build -t reason-client-server-example .
+$ docker run -d -p 8000:8000 reason-client-server-example
+```
+
+## Demo
 
 open http://localhost:8000/index in a browser
