@@ -99,7 +99,11 @@ $ opam install reason merlin re tls lwt cohttp ezjsonm
 
 ## Docker
 
-Alternatively, use the Dockerfile to build a container with the client and server code. First, edit Dockerfile and replace <YOUR_KEY_HERE> with your API key
+Alternatively, you can use docker to build a container with all the client and server code. 
+
+First, edit the Dockerfile and replace <YOUR_KEY_HERE> with your API key.
+
+Then, build the image and start the container:
 
 ```
 $ docker build -t reason-client-server-example .
